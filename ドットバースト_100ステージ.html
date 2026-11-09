@@ -1,0 +1,897 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f3f7f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ドットバースト — 100ステージ連鎖パズル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#f3f7f2;
+  --paper-2:#e8f0e9;
+  --surface:#ffffff;
+  --ink:#122023;
+  --ink-soft:#3a4f52;
+  --muted:#5d7176;
+  --line:#d3e1d9;
+  --board:#132429;
+  --board-2:#1d363c;
+  --cell:#20393f;
+  --cell-line:#325057;
+  --mint:#3ddcae;
+  --mint-deep:#0f7a63;
+  --gold:#ffc861;
+  --gold-deep:#8a5b06;
+  --coral:#ff7a66;
+  --coral-deep:#a83a2c;
+  --shadow:0 20px 44px -22px rgba(18,40,36,.42),0 3px 10px -4px rgba(18,40,36,.18);
+  --radius:24px;
+  --font-latin:"Space Grotesk","Zen Kaku Gothic New",system-ui,sans-serif;
+  --font-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --step-0:clamp(.94rem,.9rem + .18vw,1.03rem);
+  --step-1:clamp(1.1rem,1rem + .5vw,1.28rem);
+  --step-2:clamp(1.35rem,1.1rem + 1.4vw,1.9rem);
+  --step-3:clamp(1.6rem,1.2rem + 2.2vw,2.4rem);
+  --space:clamp(14px,2.2vw,24px);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{min-height:100%;background:var(--paper)}
+body{
+  margin:0;min-height:100vh;padding:0;
+  background:
+    radial-gradient(circle at 12% 6%,#e2f3e7 0,transparent 26rem),
+    radial-gradient(circle at 92% 88%,#e6eef3 0,transparent 24rem),
+    var(--paper);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:var(--step-0);
+  line-height:1.7;
+  -webkit-text-size-adjust:100%;
+  -webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  overflow-x:hidden;
+}
+/* dot-lattice signature motif */
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:radial-gradient(rgba(18,32,35,.13) 1px,transparent 1.6px);
+  background-size:22px 22px;
+  mask-image:radial-gradient(circle at 50% 40%,#000 0,transparent 78%);
+  -webkit-mask-image:radial-gradient(circle at 50% 40%,#000 0,transparent 78%);
+  opacity:.7;
+}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:clamp(16px,2.6vw,30px) clamp(14px,3.2vw,40px) 26px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:clamp(18px,3vw,34px)}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.mark{width:40px;height:40px;flex:none;display:grid;grid-template-columns:1fr 1fr;gap:4px;transform:rotate(-8deg)}
+.mark i{display:block;border-radius:50%;background:var(--ink)}
+.mark i:nth-child(1){background:var(--mint)}
+.mark i:nth-child(2){background:var(--ink)}
+.mark i:nth-child(3){background:var(--ink);opacity:.28}
+.mark i:nth-child(4){background:var(--coral)}
+.wordmark{font-family:var(--font-latin);font-weight:700;font-size:1.02rem;letter-spacing:.1em;line-height:1.1;white-space:nowrap}
+.wordmark b{color:var(--mint-deep)}
+.sub{margin-top:5px;font-size:.66rem;letter-spacing:.2em;color:var(--muted);font-weight:700;font-family:var(--font-latin)}
+.tools{display:flex;gap:7px;flex:none}
+.tool{
+  border:1px solid var(--line);background:rgba(255,255,255,.7);border-radius:999px;
+  min-height:38px;padding:7px 14px;font-family:inherit;font-size:.79rem;font-weight:700;
+  color:var(--ink-soft);cursor:pointer;touch-action:manipulation;
+  transition:background .16s,border-color .16s,transform .12s;
+}
+.tool:hover{background:#fff;border-color:#b6cdc2}
+.tool:active{transform:scale(.96)}
+.tool[aria-pressed="false"]{color:var(--muted);background:rgba(255,255,255,.4)}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(248px,296px);gap:clamp(18px,3.4vw,44px);align-items:start}
+.play{min-width:0}
+.play-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 2px clamp(10px,1.4vw,16px)}
+.identity-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1px}
+.identity-line .kicker{margin:0}
+.par-tag{display:inline-flex;align-items:center;border:1px solid #b6d8c9;background:#e0f5eb;color:#126b56;border-radius:999px;padding:2px 8px;font-size:.65rem;font-weight:700;line-height:1.5;white-space:nowrap}
+.stage-index{margin:4px 0 2px;font-family:var(--font-latin);font-size:.68rem;font-weight:700;letter-spacing:.13em;color:var(--muted);line-height:1.2}
+.kicker{margin:0 0 3px;font-family:var(--font-latin);font-size:.7rem;font-weight:700;letter-spacing:.18em;color:var(--mint-deep)}
+.title{margin:0;font-size:var(--step-2);font-weight:900;letter-spacing:-.045em;line-height:1.15}
+.stage-pick{
+  appearance:none;-webkit-appearance:none;max-width:170px;
+  border:1px solid var(--line);border-radius:12px;background:#fff url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235d7176' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 11px center;
+  padding:9px 30px 9px 12px;font-family:inherit;font-size:.82rem;font-weight:700;color:var(--ink);cursor:pointer;
+}
+.rig{position:relative;max-width:660px;margin:0 auto}
+.rig.shake{animation:shake .3s ease-in-out}
+@keyframes shake{0%,100%{transform:translate(0,0)}25%{transform:translate(-3px,2px)}50%{transform:translate(2px,-2px)}75%{transform:translate(-2px,-2px)}}
+.panel{
+  position:relative;padding:clamp(9px,1.4vw,14px);border-radius:var(--radius);
+  background:linear-gradient(170deg,#1a3137,var(--board) 55%);
+  box-shadow:var(--shadow);
+  isolation:isolate;overflow:hidden;
+}
+.panel::before{
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:radial-gradient(circle at 50% -20%,rgba(61,220,174,.16),transparent 62%);
+}
+.grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:clamp(5px,.9vw,9px);aspect-ratio:1;touch-action:manipulation;position:relative;z-index:1}
+.cell{
+  position:relative;display:grid;place-items:center;min-width:0;min-height:0;padding:0;
+  border:1px solid var(--cell-line);border-radius:clamp(10px,1.4vw,16px);
+  background:linear-gradient(150deg,#26444b,var(--cell));
+  cursor:pointer;touch-action:manipulation;overflow:hidden;
+  transition:background .18s,border-color .18s,transform .12s;
+}
+.cell:disabled{cursor:default}
+.cell:active:not(:disabled){transform:scale(.945)}
+@media (hover:hover){.cell:hover:not(:disabled){border-color:#6d938c;background:#2b4d55}}
+.cell:focus-visible{outline:3px solid #7ff0d2;outline-offset:2px;z-index:3}
+.orb{
+  display:grid;place-items:center;position:relative;z-index:1;
+  width:64%;height:64%;min-width:26px;min-height:26px;border-radius:50%;
+  font-family:var(--font-latin);font-size:clamp(1rem,2.6vw,1.5rem);font-weight:700;line-height:1;
+  font-variant-numeric:tabular-nums;
+  box-shadow:inset 0 2px 3px rgba(255,255,255,.5),inset 0 -4px 8px rgba(0,0,0,.16),0 4px 10px -3px rgba(0,0,0,.45);
+  animation:drop .22s ease-out;
+}
+@keyframes drop{from{transform:scale(.55)}to{transform:scale(1)}}
+.orb[data-v="1"]{background:linear-gradient(160deg,#8bf0d4,#2ec79c);color:#08302a}
+.orb[data-v="2"]{background:linear-gradient(160deg,#b6f2bc,#57cf86);color:#0a3a20}
+.orb[data-v="3"]{background:linear-gradient(160deg,#ffe0a0,#ffbc4a);color:#4a3204;box-shadow:inset 0 2px 3px rgba(255,255,255,.65),inset 0 -4px 8px rgba(120,60,0,.22),0 0 0 3px rgba(255,200,97,.22),0 4px 10px -3px rgba(0,0,0,.4)}
+.cell.lit{border-color:rgba(255,200,97,.55);background:#2b4a4c}
+.cell.pop{z-index:4;border-color:#fff3cd;box-shadow:0 0 0 2px rgba(255,200,97,.55),0 0 26px 10px rgba(255,122,102,.34)}
+.cell.pop .orb{animation:burst .3s ease-out forwards}
+@keyframes burst{0%{transform:scale(.9);filter:brightness(2)}60%{transform:scale(1.35);opacity:1}100%{transform:scale(.2);opacity:0}}
+.cell.hit{border-color:rgba(61,220,174,.75);box-shadow:inset 0 0 0 1px rgba(61,220,174,.45),0 0 16px -6px rgba(61,220,174,.7)}
+.spark{
+  position:absolute;z-index:6;width:7px;height:7px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,#fff 0,#ffc861 45%,rgba(255,122,102,0) 72%);
+  animation:fly .46s ease-out forwards;
+}
+@keyframes fly{from{transform:translate(0,0) scale(1);opacity:1}to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+.chain-tag{
+  position:absolute;z-index:7;pointer-events:none;left:50%;top:50%;
+  font-family:var(--font-latin);font-weight:700;font-size:clamp(1.1rem,3vw,1.6rem);
+  color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.55),0 0 22px rgba(255,200,97,.6);
+  animation:tagUp .7s ease-out forwards;white-space:nowrap;
+}
+@keyframes tagUp{0%{transform:translate(-50%,-50%) scale(.7);opacity:0}25%{transform:translate(-50%,-58%) scale(1.1);opacity:1}100%{transform:translate(-50%,-110%) scale(1);opacity:0}}
+.foot-note{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 4px 0;color:#a9c2bd;font-size:.73rem;letter-spacing:.02em}
+.foot-note b{color:#fff;font-family:var(--font-latin)}
+.hint-legend{display:flex;align-items:center;gap:7px}
+.led{width:8px;height:8px;border-radius:50%;background:var(--gold)}
+.side{display:flex;flex-direction:column;gap:clamp(12px,1.6vw,18px)}
+.side-title{margin:0;font-size:var(--step-1);font-weight:900;letter-spacing:-.03em;line-height:1.45}
+.side-title em{font-style:normal;color:var(--mint-deep)}
+.side-text{margin:6px 0 0;font-size:.88rem;line-height:1.8;color:var(--muted)}
+.meters{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.meter{border:1px solid var(--line);background:rgba(255,255,255,.8);border-radius:16px;padding:11px 13px;min-width:0}
+.meter dt{margin:0;font-size:.68rem;font-weight:700;letter-spacing:.09em;color:var(--muted)}
+.meter dd{margin:3px 0 0;font-family:var(--font-latin);font-size:1.6rem;font-weight:700;line-height:1.2;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.meter dd small{font-family:var(--font-body);font-size:.72rem;font-weight:700;color:var(--muted);letter-spacing:0}
+.bar{height:5px;margin-top:8px;border-radius:9px;background:var(--paper-2);overflow:hidden}
+.bar span{display:block;height:100%;width:100%;border-radius:inherit;background:var(--mint-deep);transition:width .28s ease,background .2s}
+.bar span.low{background:var(--coral)}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{
+  min-height:48px;padding:9px 10px;border-radius:14px;border:1px solid var(--line);
+  background:#fff;font-family:inherit;font-size:.85rem;font-weight:700;color:var(--ink);
+  cursor:pointer;touch-action:manipulation;transition:background .16s,border-color .16s,transform .12s;
+}
+.btn:hover:not(:disabled){background:#f8fdfa;border-color:#a9c6b8}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.wide{grid-column:1/-1;background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.wide:hover:not(:disabled){background:#22393d;border-color:#22393d}
+.rules{border-left:3px solid var(--mint-deep);padding:1px 0 1px 12px;font-size:.8rem;line-height:1.8;color:var(--muted)}
+.rules b{color:var(--ink)}
+.progress-block{border-top:1px solid var(--line);padding-top:11px;display:grid;gap:7px}
+.progress-top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:.73rem;color:var(--muted)}
+.progress-top strong{font-family:var(--font-latin);font-size:.76rem;color:var(--ink);font-variant-numeric:tabular-nums}
+.progress-bar,.chapter-bar{height:5px;border-radius:99px;background:#dce9e1;overflow:hidden}
+.progress-bar span,.chapter-bar span{display:block;height:100%;width:0;border-radius:inherit;background:var(--mint-deep);transition:width .28s ease}
+.chapter-progress{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:3px;font-size:.67rem;font-weight:700;color:var(--muted)}
+.chapter-bar{width:74px;flex:none;height:4px}
+.chapter-bar span{background:var(--mint)}
+.overlay{
+  position:absolute;inset:0;z-index:20;display:none;place-items:center;padding:18px;
+  background:rgba(10,24,27,.74);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:var(--radius);
+}
+.overlay.on{display:grid;animation:fade .2s ease-out}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.card{
+  width:min(100%,330px);text-align:center;padding:24px 22px 20px;border-radius:22px;
+  background:linear-gradient(180deg,#ffffff,var(--paper));
+  box-shadow:0 24px 50px -20px rgba(0,0,0,.5);animation:drop .26s ease-out;
+}
+.badge{width:54px;height:54px;margin:0 auto 12px;border-radius:50%;display:grid;place-items:center;font-size:1.5rem;font-weight:700;background:#d9f6ea;color:var(--mint-deep);font-family:var(--font-latin)}
+.card.bad .badge{background:#ffe3dc;color:var(--coral-deep)}
+.card h2{margin:0 0 5px;font-size:var(--step-2);letter-spacing:-.04em;line-height:1.25}
+.card p{margin:0 0 16px;font-size:.85rem;line-height:1.75;color:var(--muted)}
+.card .acts{grid-template-columns:1fr}
+.footer{display:flex;justify-content:space-between;gap:12px;margin-top:clamp(20px,3.4vw,36px);padding-top:13px;border-top:1px solid var(--line);color:var(--muted);font-size:.71rem;flex-wrap:wrap}
+.footer b{font-family:var(--font-latin);letter-spacing:.1em;color:var(--ink)}
+.toast{
+  position:fixed;z-index:50;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));
+  transform:translate(-50%,10px);opacity:0;pointer-events:none;
+  background:var(--ink);color:#fff;border-radius:999px;padding:9px 16px;
+  font-size:.82rem;font-weight:700;box-shadow:0 10px 24px -10px rgba(0,0,0,.6);
+  transition:opacity .18s,transform .18s;max-width:88vw;text-align:center;
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (max-width:800px){
+  .stage{grid-template-columns:minmax(0,1fr)}
+  .side{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;align-items:start}
+  .side-intro{grid-column:1/-1}
+  .side-text{display:none}
+  .meters{grid-column:1;margin:0}
+  .acts{grid-column:2}
+  .rules{grid-column:1/-1}
+  .progress-block{grid-column:1/-1}
+}
+@media (max-width:470px){
+  .wrap{padding-left:11px;padding-right:11px}
+  .mark{width:34px;height:34px}
+  .tool{padding:6px 10px;font-size:.73rem;min-height:34px}
+  .panel{padding:8px;border-radius:18px}
+  .grid{gap:5px}
+  .cell{border-radius:9px}
+  .orb{min-width:23px;min-height:23px;font-size:1rem}
+  .side{gap:12px}
+  .meter{padding:9px 10px;border-radius:13px}
+  .meter dd{font-size:1.36rem}
+  .btn{min-height:44px;font-size:.79rem;border-radius:12px}
+  .stage-pick{max-width:140px;font-size:.76rem}
+}
+@media (hover:none){.cell:hover:not(:disabled){background:linear-gradient(150deg,#26444b,var(--cell));border-color:var(--cell-line)}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .spark{display:none}
+}
+@media print{
+  body{background:#fff}body::before{display:none}
+  .tools,.acts,.overlay,.toast{display:none!important}
+  .wrap{max-width:none;padding:8mm}.stage{grid-template-columns:1fr 240px}
+  .panel{box-shadow:none}
+}
+@page{size:A4;margin:12mm}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <div>
+        <div class="wordmark">DOT<b>//</b>BURST</div>
+        <div class="sub">CHAIN REACTION PUZZLE</div>
+      </div>
+    </div>
+    <div class="tools">
+      <button class="tool" id="soundBtn" type="button" aria-pressed="true">♪ 音 ON</button>
+      <button class="tool" id="helpBtn" type="button">遊びかた</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="play" aria-label="ゲーム盤">
+      <div class="play-head">
+        <div>
+          <div class="identity-line">
+            <p class="kicker" id="chapterLabel">CHAPTER 01 · 芽吹き</p>
+            <span class="par-tag" id="parLabel">最短 3 手</span>
+          </div>
+          <p class="stage-index" id="stageLabel">STAGE 001 / 100</p>
+          <h1 class="title" id="stageName">ひとつぶ</h1>
+        </div>
+        <select class="stage-pick" id="stagePick" aria-label="チャプター別ステージ選択"></select>
+      </div>
+
+      <div class="rig" id="rig">
+        <div class="panel">
+          <div class="grid" id="grid" role="grid" aria-label="6行6列の盤面"></div>
+          <div class="foot-note">
+            <span class="hint-legend"><i class="led"></i><b>3</b> は次の一撃で爆発</span>
+            <span>タップで +1</span>
+          </div>
+          <div class="overlay" id="overlay" aria-live="assertive">
+            <div class="card" id="card">
+              <div class="badge" id="badge">✓</div>
+              <h2 id="cardTitle">全消し！</h2>
+              <p id="cardText">盤面のドットをすべて消しました。</p>
+              <div class="acts" id="cardActs"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side" aria-label="ステージ情報">
+      <div class="side-intro">
+        <h2 class="side-title">つないで、<em>一掃</em>する。</h2>
+        <p class="side-text">100面の連鎖パズル。数字を4にすると弾け、上下左右のドットを育てる。最短手数を目安に、一気に盤面を消そう。</p>
+      </div>
+
+      <dl class="meters">
+        <div class="meter">
+          <dt>のこり手数</dt>
+          <dd><span id="movesLeft">0</span><small> / <span id="movesLimit">0</span></small></dd>
+          <div class="bar"><span id="movesBar"></span></div>
+        </div>
+        <div class="meter">
+          <dt>最大連鎖</dt>
+          <dd><span id="maxChain">0</span><small> 連</small></dd>
+        </div>
+      </dl>
+
+      <div class="acts">
+        <button class="btn" id="undoBtn" type="button">↶ 1手もどす</button>
+        <button class="btn" id="resetBtn" type="button">⟲ やりなおす</button>
+        <button class="btn wide" id="nextBtn" type="button">次のステージ →</button>
+      </div>
+
+      <p class="rules"><b>空マスもタップできます。</b>空マスをタップすると「1」が置かれます。弾は<b>すでにドットがあるマス</b>にだけ効くので、置くほど手数が増える点に注意。</p>
+
+      <div class="progress-block" aria-label="進行状況">
+        <div class="progress-top"><span>全体の進行</span><strong id="clearedCount">0 / 100</strong></div>
+        <div class="progress-bar"><span id="overallBar"></span></div>
+        <div class="chapter-progress"><span id="chapterProgress">CHAPTER 01 · 0 / 10</span><div class="chapter-bar"><span id="chapterBar"></span></div></div>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    <span><b>DOT//BURST</b>　ひと押しから、連鎖が走る。</span>
+    <span>タッチ操作対応　·　全10チャプター・100ステージ</span>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var SIZE = 6, N = SIZE * SIZE;
+
+  // verified: minimum moves to clear / move limit
+  var CHAPTERS = ['芽吹き','火種','波紋','渦','共鳴','迷宮','乱流','深淵','残響','終焉'];
+  var STAGES = [
+    {ch:0,par:3,name:'ひとつぶ',rows:['......','...32.','...33.','...13.','....3.','.3....']},
+    {ch:0,par:3,name:'ふたつぶ',rows:['......','...13.','...323','3..33.','......','......']},
+    {ch:0,par:3,name:'かぞえる',rows:['..3...','..222.','..333.','3.....','......','......']},
+    {ch:0,par:3,name:'はじまりの弾',rows:['...3..','......','232...','.32...','.33...','......']},
+    {ch:0,par:3,name:'となりあわせ',rows:['......','......','3.....','..3333','..132.','......']},
+    {ch:0,par:4,name:'三連の芽',rows:['......','.1323.','.323..','......','.....3','......']},
+    {ch:0,par:4,name:'わかれ道',rows:['......','.331..','3232..','......','......','...3..']},
+    {ch:0,par:4,name:'小さな渦',rows:['..2...','.31...','.33..3','.33...','......','......']},
+    {ch:0,par:4,name:'芽吹きの丘',rows:['......','3.....','......','..133.','.2333.','......']},
+    {ch:0,par:4,name:'最初の連鎖',rows:['......','...33.','3..23.','....3.','...31.','......']},
+    {ch:1,par:4,name:'火種',rows:['......','.333..','.33...','..2...','....23','......']},
+    {ch:1,par:4,name:'火の粉',rows:['......','....3.','....32','...33.','.313..','......']},
+    {ch:1,par:4,name:'二つの芯',rows:['......','31....','.33...','.323.3','......','......']},
+    {ch:1,par:5,name:'ひだまり',rows:['......','.2313.','..232.','......','......','.3....']},
+    {ch:1,par:5,name:'呼応',rows:['3.....','...33.','...32.','..311.','......','......']},
+    {ch:1,par:5,name:'重なる火',rows:['......','3...2.','...31.','...33.','...31.','......']},
+    {ch:1,par:5,name:'内側の火',rows:['......','.23...','.32...','.31...','....32','......']},
+    {ch:1,par:5,name:'ゆらぎ',rows:['..32..','......','......','.323..','..322.','......']},
+    {ch:1,par:5,name:'火種の庭',rows:['....3.','..331.','.233..','......','....3.','......']},
+    {ch:1,par:5,name:'連鎖の入口',rows:['......','..2...','..3...','..22..','..332.','.....3']},
+    {ch:2,par:5,name:'波紋',rows:['......','.32...','....3.','...323','...31.','......']},
+    {ch:2,par:5,name:'さざなみ',rows:['......','3.....','...2..','...23.','.2332.','......']},
+    {ch:2,par:5,name:'水面',rows:['......','...2..','..23..','..33..','....32','....2.']},
+    {ch:2,par:5,name:'重波',rows:['......','323...','.1332.','......','....3.','......']},
+    {ch:2,par:6,name:'環',rows:['..3...','..23..','..233.','..321.','....2.','...31.']},
+    {ch:2,par:6,name:'打ち寄せ',rows:['......','.31...','.23...','.23.3.','.3312.','....2.']},
+    {ch:2,par:6,name:'広がる輪',rows:['......','......','13222.','332.2.','.33...','..2...']},
+    {ch:2,par:6,name:'半円',rows:['.32...','.13...','.3333.','..2.2.','.22...','......']},
+    {ch:2,par:6,name:'波紋の層',rows:['......','...33.','...23.','.31.3.','.21332','......']},
+    {ch:2,par:6,name:'水鏡',rows:['......','..2223','..3332','.22...','.2.3..','......']},
+    {ch:3,par:6,name:'渦',rows:['......','.333..','.322..','.3.22.','....1.','...23.']},
+    {ch:3,par:6,name:'渦潮',rows:['......','...2..','..13.3','..122.','..333.','..3.3.']},
+    {ch:3,par:6,name:'巻き込み',rows:['...2..','...3..','.121..','.3.3..','.323..','..33..']},
+    {ch:3,par:6,name:'螺旋の芽',rows:['......','.32...','..3...','.3312.','.331..','.3.3..']},
+    {ch:3,par:6,name:'中心へ',rows:['....23','...11.','..133.','..331.','...33.','......']},
+    {ch:3,par:6,name:'反転',rows:['......','...2..','...2.3','.22222','.3332.','......']},
+    {ch:3,par:7,name:'二重の渦',rows:['......','..2322','..323.','...13.','...21.','....2.']},
+    {ch:3,par:7,name:'渦の底',rows:['......','.3....','..33..','.132..','.1232.','.31...']},
+    {ch:3,par:7,name:'吸い込む',rows:['.31...','..13..','2312..','.333..','.2....','......']},
+    {ch:3,par:7,name:'渦巻く廊下',rows:['......','...3..','..3...','.12311','.33232','......']},
+    {ch:4,par:7,name:'共鳴',rows:['......','.1312.','.13.3.','.32...','233...','......']},
+    {ch:4,par:7,name:'響き',rows:['......','..223.','...222','...233','..12..','..3...']},
+    {ch:4,par:7,name:'和音',rows:['.3....','.2133.','.1.32.','.3.23.','....2.','......']},
+    {ch:4,par:7,name:'重奏',rows:['......','31....','.231..','.3333.','31.2..','......']},
+    {ch:4,par:7,name:'打音',rows:['......','.323..','...33.','...33.','.2211.','....3.']},
+    {ch:4,par:7,name:'反響板',rows:['......','....3.','.32.2.','11333.','3..13.','......']},
+    {ch:4,par:7,name:'ひびきの街',rows:['.3....','.2.21.','...31.','..332.','..133.','......']},
+    {ch:4,par:7,name:'協奏',rows:['......','...2..','..13..','.232..','.1331.','..3.3.']},
+    {ch:4,par:8,name:'同調',rows:['..13..','..233.','22133.','...12.','......','......']},
+    {ch:4,par:8,name:'共鳴の部屋',rows:['......','....3.','...31.','..221.','.3321.','.31...']},
+    {ch:5,par:8,name:'迷宮',rows:['......','...313','.31112','.2.33.','....3.','......']},
+    {ch:5,par:8,name:'曲がり角',rows:['......','....3.','..112.','.33322','.3..12','......']},
+    {ch:5,par:8,name:'袋小路',rows:['......','....3.','.3132.','...32.','..213.','...21.']},
+    {ch:5,par:8,name:'通路',rows:['......','.12...','.33...','.23.3.','21321.','......']},
+    {ch:5,par:8,name:'分岐',rows:['..3...','..11..','..2333','..1131','....3.','......']},
+    {ch:5,par:8,name:'岐路',rows:['...23.','.3331.','..31..','.22...','.12...','......']},
+    {ch:5,par:8,name:'隠し扉',rows:['.22...','..123.','..22..','...33.','..331.','......']},
+    {ch:5,par:8,name:'迷い道',rows:['...3..','..333.','..31..','..21..','..21..','..2.3.']},
+    {ch:5,par:8,name:'壁の続き',rows:['......','....3.','.12.2.','.23.1.','.3332.','....2.']},
+    {ch:5,par:8,name:'迷宮の心臓',rows:['.32...','..11..','..33..','.33...','.1322.','......']},
+    {ch:6,par:9,name:'乱流',rows:['......','.12...','.13.2.','.3233.','.32.2.','...22.']},
+    {ch:6,par:9,name:'乱れ打ち',rows:['..31..','.2.22.','.33.3.','.1333.','.2.31.','......']},
+    {ch:6,par:9,name:'渦中',rows:['......','.2.13.','.322..','.3312.','.23.2.','.13...']},
+    {ch:6,par:9,name:'交差',rows:['......','2.133.','1313..','22.33.','..223.','......']},
+    {ch:6,par:9,name:'不規則',rows:['......','.22...','.2.21.','.3333.','.1323.','..12..']},
+    {ch:6,par:9,name:'風の穴',rows:['......','31..3.','.2131.','21333.','..321.','......']},
+    {ch:6,par:9,name:'乱流の帯',rows:['.3..3.','.21.2.','.21...','.3232.','.3331.','......']},
+    {ch:6,par:9,name:'崩れかけ',rows:['..13..','..3.2.','.2222.','.1222.','.33.3.','......']},
+    {ch:6,par:9,name:'加速',rows:['..3...','.2.32.','.2221.','.3331.','.3.12.','......']},
+    {ch:6,par:9,name:'乱れの果て',rows:['.13.3.','.12.2.','.3..2.','..332.','.2333.','......']},
+    {ch:7,par:10,name:'深淵',rows:['..2.3.','..212.','..2.2.','.2133.','.1332.','......']},
+    {ch:7,par:10,name:'底なし',rows:['..3.2.','.2.32.','.231..','.2223.','.3.31.','......']},
+    {ch:7,par:10,name:'沈む',rows:['..3.2.','.12.3.','.2232.','.33.1.','..123.','......']},
+    {ch:7,par:10,name:'暗がり',rows:['......','213.2.','.2.32.','2133..','.2323.','......']},
+    {ch:7,par:10,name:'深層',rows:['......','.3331.','.3222.','..1.1.','.3132.','....2.']},
+    {ch:7,par:10,name:'よどみ',rows:['......','.12132','.21133','.2.33.','..23.3','......']},
+    {ch:7,par:10,name:'深淵のふち',rows:['......','.22213','.1312.','..1322','..133.','......']},
+    {ch:7,par:10,name:'無音',rows:['......','.3233.','.1332.','.2..2.','.2122.','.2..2.']},
+    {ch:7,par:10,name:'黒い波',rows:['......','23.13.','..311.','2233..','13232.','......']},
+    {ch:7,par:10,name:'底の光',rows:['..3...','.1231.','.23.2.','.3311.','.3122.','......']},
+    {ch:8,par:11,name:'残響',rows:['......','23.21.','1.112.','32233.','.232..','......']},
+    {ch:8,par:11,name:'余韻',rows:['......','23222.','.121..','2122..','.3322.','......']},
+    {ch:8,par:11,name:'あとひびき',rows:['......','.3..3.','22122.','1132..','11323.','......']},
+    {ch:8,par:11,name:'遅れて届く',rows:['......','.3213.','.21.2.','.2.12.','.3331.','.23...']},
+    {ch:8,par:11,name:'残響の帯',rows:['......','2113..','.3121.','32221.','.32.3.','......']},
+    {ch:8,par:11,name:'遠い爆発',rows:['......','.3222.','.1121.','.22.1.','.2333.','...2..']},
+    {ch:8,par:11,name:'響き渡る',rows:['......','.12223','.122..','.2321.','.1322.','......']},
+    {ch:8,par:11,name:'二度鳴る',rows:['......','.31132','.2.12.','.1.331','.3.323','......']},
+    {ch:8,par:12,name:'残像',rows:['......','.3122.','.21.2.','.2212.','..233.','.3..2.']},
+    {ch:8,par:12,name:'消えかけの音',rows:['......','.1321.','.3.11.','.2212.','.23.3.','..33..']},
+    {ch:9,par:12,name:'終焉',rows:['..2...','.2113.','.1333.','..233.','.2211.','.21...']},
+    {ch:9,par:12,name:'最後の火花',rows:['......','.2213.','.131.2','.22313','.3311.','....2.']},
+    {ch:9,par:12,name:'全部消える',rows:['.3.3..','22.23.','.2133.','.1133.','.2111.','......']},
+    {ch:9,par:12,name:'完全連鎖',rows:['......','213.2.','2.111.','231223','.2333.','......']},
+    {ch:9,par:13,name:'限界',rows:['......','..211.','.23211','.21133','.1331.','..3..3']},
+    {ch:9,par:13,name:'静寂',rows:['....2.','.3111.','.2122.','.1113.','.332..','.23.3.']},
+    {ch:9,par:13,name:'最終盤',rows:['.21.3.','.11312','.33221','.231..','..312.','......']},
+    {ch:9,par:13,name:'あと一歩',rows:['.1322.','.111..','.2132.','..121.','..333.','..31..']},
+    {ch:9,par:14,name:'全部か無か',rows:['.3..2.','22333.','.1223.','.1112.','.2111.','.2....']},
+    {ch:9,par:14,name:'ドットバースト',rows:['...3..','.32.13','.22212','.3311.','.32.2.','.113..']}
+  ];
+
+  var NB = [];
+  for (var i = 0; i < N; i++) {
+    var r = Math.floor(i / SIZE), c = i % SIZE, list = [];
+    if (r > 0) list.push(i - SIZE);
+    if (r < SIZE - 1) list.push(i + SIZE);
+    if (c > 0) list.push(i - 1);
+    if (c < SIZE - 1) list.push(i + 1);
+    NB.push(list);
+  }
+
+  function $(id) { return document.getElementById(id); }
+
+  var gridEl = $('grid'), overlay = $('overlay'), rig = $('rig'), pick = $('stagePick');
+
+  var stageIndex = 0;
+  var cells = [];
+  var movesLeft = 0;
+  var limit = 0;
+  var maxChain = 0;
+  var history = [];
+  var busy = false;
+  var finished = false;
+  var timers = [];
+  var soundOn = true;
+  var toastTimer = 0;
+  var audio = null;
+
+  var save = { unlocked: 0, cleared: [], best: {} };
+  try {
+    var raw = JSON.parse(window.localStorage.getItem('dotburst.save.100') || 'null');
+    if (raw && typeof raw === 'object') {
+      save.unlocked = Math.max(0, Math.min(STAGES.length - 1, Number(raw.unlocked) || 0));
+      save.cleared = Array.isArray(raw.cleared) ? raw.cleared.filter(function (n, i, a) { return Number.isInteger(n) && n >= 0 && n < STAGES.length && a.indexOf(n) === i; }).sort(function (a, b) { return a - b; }) : [];
+      save.best = (raw.best && typeof raw.best === 'object') ? raw.best : {};
+    }
+  } catch (e) {}
+  function persist() {
+    try { window.localStorage.setItem('dotburst.save.100', JSON.stringify(save)); } catch (e) {}
+  }
+
+  /* ---------- rules ---------- */
+  // tap: +1 on the tapped cell. A dot that reaches 4 bursts: it clears to empty and
+  // sends +1 into each orthogonal neighbour that currently holds a dot. Chain until stable.
+  function resolve(start, tapIndex) {
+    var sim = start.slice();
+    sim[tapIndex] += 1;
+    var queue = [], head = 0, events = [];
+    if (sim[tapIndex] >= 4) queue.push(tapIndex);
+    while (head < queue.length) {
+      var at = queue[head++];
+      if (sim[at] < 4) continue;
+      sim[at] = 0;
+      var ring = NB[at];
+      for (var k = 0; k < ring.length; k++) {
+        var j = ring[k];
+        if (sim[j] > 0) {
+          sim[j] += 1;
+          if (sim[j] >= 4) queue.push(j);
+        }
+      }
+      events.push({ at: at, board: sim.slice() });
+    }
+    return { board: sim, events: events };
+  }
+
+  function isCleared(board) {
+    for (var i = 0; i < N; i++) if (board[i] !== 0) return false;
+    return true;
+  }
+
+  function parseStage(rows) {
+    var out = [], text = rows.join('');
+    for (var i = 0; i < N; i++) {
+      var ch = text.charAt(i);
+      out.push(ch === '.' || ch === '' ? 0 : Number(ch));
+    }
+    return out;
+  }
+
+  /* ---------- rendering ---------- */
+  var cellEls = [];
+  function buildGrid() {
+    gridEl.innerHTML = '';
+    cellEls = [];
+    for (var i = 0; i < N; i++) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cell';
+      b.setAttribute('role', 'gridcell');
+      b.dataset.index = String(i);
+      b.addEventListener('click', onCellClick);
+      gridEl.appendChild(b);
+      cellEls.push(b);
+    }
+  }
+
+  function paint(board, popIndex, hitIndex) {
+    for (var i = 0; i < N; i++) {
+      var el = cellEls[i];
+      var v = board[i] || 0;
+      el.className = 'cell' + (v === 3 ? ' lit' : '') +
+        (i === popIndex ? ' pop' : '') + (i === hitIndex ? ' hit' : '');
+      el.disabled = busy || finished;
+      var orb = el.querySelector('.orb');
+      if (v === 0) {
+        if (orb) el.removeChild(orb);
+      } else if (!orb) {
+        orb = document.createElement('span');
+        orb.className = 'orb';
+        orb.textContent = String(v);
+        orb.dataset.v = String(v);
+        el.appendChild(orb);
+      } else {
+        if (orb.dataset.v !== String(v)) {
+          orb.dataset.v = String(v);
+          orb.textContent = String(v);
+        }
+      }
+      var row = Math.floor(i / SIZE) + 1, col = (i % SIZE) + 1;
+      el.setAttribute('aria-label', row + '行' + col + '列、' +
+        (v === 0 ? '空きマス' : '数字 ' + v + (v === 3 ? '、次で爆発' : '')));
+    }
+  }
+
+  function refreshHud() {
+    var stage = STAGES[stageIndex];
+    var chapterStart = Math.floor(stageIndex / 10) * 10;
+    var chapterCleared = 0;
+    for (var ci = chapterStart; ci < Math.min(chapterStart + 10, STAGES.length); ci++) {
+      if (save.cleared.indexOf(ci) >= 0) chapterCleared++;
+    }
+    $('movesLeft').textContent = String(movesLeft);
+    $('movesLimit').textContent = String(limit);
+    $('maxChain').textContent = String(maxChain);
+    var ratio = limit > 0 ? Math.max(0, Math.min(1, movesLeft / limit)) : 0;
+    var bar = $('movesBar');
+    bar.style.width = (ratio * 100).toFixed(1) + '%';
+    bar.className = ratio <= 0.34 ? 'low' : '';
+    $('stageLabel').textContent = 'STAGE ' + pad(stageIndex + 1) + ' / 100';
+    $('chapterLabel').textContent = 'CHAPTER ' + pad(stage.ch + 1) + ' · ' + CHAPTERS[stage.ch];
+    $('parLabel').textContent = '最短 ' + stage.par + ' 手';
+    $('stageName').textContent = stage.name;
+    $('undoBtn').disabled = busy || (history.length === 0 && !finished);
+    $('resetBtn').disabled = busy;
+    var nextOpen = stageIndex < STAGES.length - 1 && stageIndex + 1 <= save.unlocked;
+    $('nextBtn').disabled = busy || !nextOpen;
+    $('nextBtn').textContent = stageIndex < STAGES.length - 1 ? '次のステージ →' : '100面クリア！';
+
+    $('clearedCount').textContent = save.cleared.length + ' / 100';
+    $('overallBar').style.width = ((save.cleared.length / STAGES.length) * 100).toFixed(1) + '%';
+    $('chapterProgress').textContent = 'CHAPTER ' + pad(stage.ch + 1) + ' · ' + chapterCleared + ' / 10';
+    $('chapterBar').style.width = ((chapterCleared / 10) * 100).toFixed(1) + '%';
+
+    pick.innerHTML = '';
+    for (var ch = 0; ch < CHAPTERS.length; ch++) {
+      var group = document.createElement('optgroup');
+      group.label = 'CHAPTER ' + pad(ch + 1) + ' · ' + CHAPTERS[ch];
+      var first = ch * 10, last = Math.min(first + 10, STAGES.length);
+      for (var s = first; s < last; s++) {
+        var o = document.createElement('option');
+        o.value = String(s);
+        o.textContent = pad(s + 1) + '　' + STAGES[s].name + '　·　最短 ' + STAGES[s].par + '手';
+        o.disabled = s > save.unlocked;
+        o.selected = s === stageIndex;
+        group.appendChild(o);
+      }
+      pick.appendChild(group);
+    }
+  }
+
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+
+  /* ---------- audio / haptics ---------- */
+  function tone(freq, dur, type) {
+    if (!soundOn) return;
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audio) audio = new Ctx();
+      if (audio.state === 'suspended' && audio.resume) audio.resume();
+      var osc = audio.createOscillator(), gain = audio.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      var t = audio.currentTime;
+      gain.gain.setValueAtTime(0.055, t);
+      gain.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+      osc.connect(gain);
+      gain.connect(audio.destination);
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    } catch (e) {}
+  }
+  function buzz(pattern) {
+    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+  }
+
+  function toast(text) {
+    var t = $('toast');
+    t.textContent = text;
+    t.classList.add('on');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('on'); }, 1800);
+  }
+
+  /* ---------- effects ---------- */
+  function spawnSparks(index) {
+    var cell = cellEls[index];
+    if (!cell || !document.createElement) return;
+    for (var k = 0; k < 5; k++) {
+      var s = document.createElement('span');
+      s.className = 'spark';
+      var ang = (Math.PI * 2 * k) / 5 + Math.random();
+      var dist = 24 + Math.random() * 26;
+      s.style.setProperty('--dx', (Math.cos(ang) * dist).toFixed(1) + 'px');
+      s.style.setProperty('--dy', (Math.sin(ang) * dist).toFixed(1) + 'px');
+      cell.appendChild(s);
+      (function (node) {
+        setTimeout(function () { if (node.parentNode) node.parentNode.removeChild(node); }, 520);
+      })(s);
+    }
+  }
+
+  function spawnTag(index, n) {
+    var cell = cellEls[index];
+    if (!cell) return;
+    var tag = document.createElement('span');
+    tag.className = 'chain-tag';
+    tag.textContent = n + '連鎖';
+    cell.appendChild(tag);
+    setTimeout(function () { if (tag.parentNode) tag.parentNode.removeChild(tag); }, 720);
+  }
+
+  function shake() {
+    rig.classList.remove('shake');
+    /* reflow to restart the animation */
+    void rig.offsetWidth;
+    rig.classList.add('shake');
+    setTimeout(function () { rig.classList.remove('shake'); }, 340);
+  }
+
+  function clearTimers() {
+    for (var i = 0; i < timers.length; i++) clearTimeout(timers[i]);
+    timers = [];
+  }
+
+  /* ---------- game flow ---------- */
+  function loadStage(index) {
+    clearTimers();
+    stageIndex = Math.max(0, Math.min(STAGES.length - 1, index));
+    cells = parseStage(STAGES[stageIndex].rows);
+    limit = STAGES[stageIndex].par + (stageIndex < 20 ? 2 : 1);
+    movesLeft = limit;
+    maxChain = 0;
+    history = [];
+    busy = false;
+    finished = false;
+    overlay.classList.remove('on');
+    paint(cells, -1, -1);
+    refreshHud();
+  }
+
+  function onCellClick(event) {
+    var el = event.currentTarget;
+    var index = Number(el.dataset.index);
+    tap(index);
+  }
+
+  function tap(index) {
+    if (busy || finished) return;
+    if (movesLeft <= 0) { toast('のこり手数がありません。1手もどすか、やりなおそう。'); return; }
+
+    var result = resolve(cells, index);
+    history.push({ board: cells.slice(), movesLeft: movesLeft, maxChain: maxChain });
+    if (history.length > 60) history.shift();
+
+    movesLeft -= 1;
+    cells = result.board;
+
+    if (result.events.length === 0) {
+      paint(cells, -1, index);
+      refreshHud();
+      tone(520, 0.06, 'triangle');
+      checkEnd();
+      return;
+    }
+
+    busy = true;
+    paint(cells, -1, index);
+    refreshHud();
+    if (result.events.length >= 3) shake();
+    buzz(result.events.length >= 4 ? [16, 40, 24] : 14);
+
+    var step = 0;
+    var chain = result.events.length;
+    (function run() {
+      if (step >= result.events.length) {
+        busy = false;
+        maxChain = Math.max(maxChain, chain);
+        paint(cells, -1, -1);
+        refreshHud();
+        if (chain >= 3) tone(880, 0.2, 'sine');
+        checkEnd();
+        return;
+      }
+      var ev = result.events[step];
+      var hit = step === result.events.length - 1 ? index : ev.at;
+      paint(ev.board, ev.at, hit);
+      spawnSparks(ev.at);
+      tone(430 + Math.min(step, 9) * 52, 0.055, 'sine');
+      if (step === result.events.length - 1 && chain >= 2) spawnTag(ev.at, chain);
+      step += 1;
+      var delay = step < 4 ? 135 : 96;
+      timers.push(setTimeout(run, delay));
+    })();
+  }
+
+  function checkEnd() {
+    if (isCleared(cells)) {
+      finished = true;
+      if (save.cleared.indexOf(stageIndex) < 0) save.cleared.push(stageIndex);
+      save.cleared.sort(function (a, b) { return a - b; });
+      save.unlocked = Math.max(save.unlocked, Math.min(STAGES.length - 1, stageIndex + 1));
+      var prevBest = Number(save.best[stageIndex]);
+      var isBest = !prevBest || movesLeft > prevBest;
+      if (isBest) save.best[stageIndex] = movesLeft;
+      persist();
+      refreshHud();
+      showCard(true, isBest);
+      tone(760, 0.18, 'sine');
+      timers.push(setTimeout(function () { tone(1010, 0.22, 'sine'); }, 120));
+      buzz([18, 46, 30]);
+      return;
+    }
+    if (movesLeft <= 0) {
+      finished = true;
+      refreshHud();
+      showCard(false, false);
+    }
+  }
+
+  function showCard(win, isBest) {
+    var card = $('card');
+    card.className = 'card' + (win ? '' : ' bad');
+    $('badge').textContent = win ? '✓' : '↻';
+    $('cardTitle').textContent = win ? '全消し！' : '手数切れ…';
+    if (win) {
+      $('cardText').textContent = '最短 ' + STAGES[stageIndex].par + ' 手の盤面を、のこり ' + movesLeft + ' 手で一掃。' +
+        (isBest && movesLeft > 0 ? ' 自己ベスト更新！' : (movesLeft > 0 ? '' : ' ぴったり使い切りました。'));
+    } else {
+      $('cardText').textContent = 'まだ消えるはず。どのドットを育てるか、順番を見直してみよう。';
+    }
+    var acts = $('cardActs');
+    acts.innerHTML = '';
+
+    var main = document.createElement('button');
+    main.type = 'button';
+    main.className = 'btn wide';
+    if (win) {
+      var hasNext = stageIndex < STAGES.length - 1;
+      main.textContent = hasNext ? '次のステージへ →' : 'もう一度あそぶ';
+      main.addEventListener('click', function () {
+        overlay.classList.remove('on');
+        loadStage(hasNext ? stageIndex + 1 : stageIndex);
+      });
+    } else {
+      main.textContent = 'このステージをやりなおす';
+      main.addEventListener('click', function () {
+        overlay.classList.remove('on');
+        loadStage(stageIndex);
+      });
+    }
+    acts.appendChild(main);
+
+    if (!win) {
+      var undo = document.createElement('button');
+      undo.type = 'button';
+      undo.className = 'btn';
+      undo.textContent = '↶ 最後の1手をもどす';
+      undo.disabled = history.length === 0;
+      undo.addEventListener('click', function () {
+        overlay.classList.remove('on');
+        undoMove();
+      });
+      acts.appendChild(undo);
+    }
+    overlay.classList.add('on');
+  }
+
+  function undoMove() {
+    if (busy || history.length === 0) return;
+    var snap = history.pop();
+    cells = snap.board.slice();
+    movesLeft = snap.movesLeft;
+    maxChain = snap.maxChain;
+    finished = false;
+    clearTimers();
+    overlay.classList.remove('on');
+    paint(cells, -1, -1);
+    refreshHud();
+    toast('1手もどしました');
+  }
+
+  /* ---------- wiring ---------- */
+  $('undoBtn').addEventListener('click', undoMove);
+  $('resetBtn').addEventListener('click', function () {
+    if (busy) return;
+    loadStage(stageIndex);
+    toast('ステージをはじめから');
+  });
+  $('nextBtn').addEventListener('click', function () {
+    if (busy) return;
+    if (stageIndex < STAGES.length - 1 && stageIndex + 1 <= save.unlocked) loadStage(stageIndex + 1);
+    else if (stageIndex === STAGES.length - 1) loadStage(stageIndex);
+    else toast('このステージをクリアすると次が開きます');
+  });
+  pick.addEventListener('change', function () {
+    if (busy) { refreshHud(); return; }
+    var n = Number(pick.value);
+    if (n <= save.unlocked) loadStage(n);
+    else { refreshHud(); toast('まだ開いていないステージです'); }
+  });
+  $('soundBtn').addEventListener('click', function () {
+    soundOn = !soundOn;
+    this.textContent = soundOn ? '♪ 音 ON' : '♪ 音 OFF';
+    this.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+    if (soundOn) tone(660, 0.08, 'sine');
+  });
+  $('helpBtn').addEventListener('click', function () {
+    toast('全100面。タップで+1 → 4で爆発 → 上下左右へ連鎖');
+  });
+
+  buildGrid();
+  loadStage(0);
+})();
+</script>
+</body>
+</html>

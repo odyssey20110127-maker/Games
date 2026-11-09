@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Game Arcade</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #131c31;
+            --accent-color: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.4);
+            --text-color: #f8fafc;
+            --text-secondary: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 3rem 1rem;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            animation: fadeIn 1.5s ease-out;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .game-card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease, border-color 0.4s ease;
+            display: flex;
+            flex-direction: column;
+            animation: fadeInUp 0.8s ease-out backwards;
+        }
+
+        /* カードの登場アニメーションを少しずつ遅らせる */
+        .game-card:nth-child(1) { animation-delay: 0.1s; }
+        .game-card:nth-child(2) { animation-delay: 0.2s; }
+        .game-card:nth-child(3) { animation-delay: 0.3s; }
+        .game-card:nth-child(4) { animation-delay: 0.4s; }
+        .game-card:nth-child(5) { animation-delay: 0.5s; }
+
+        .game-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 35px -10px var(--accent-glow);
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+
+        .game-thumbnail {
+            width:0%;
+            height:0px;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* サムネイル部分にマウスが乗ったときの光るエフェクト */
+        .game-thumbnail::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+            transition: 0.5s;
+        }
+
+        .game-card:hover .game-thumbnail::after {
+            left: 100%;
+        }
+
+        .game-info {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .game-title {
+            font-size: 1.35rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+            transition: color 0.2s;
+        }
+
+        .game-card:hover .game-title {
+            color: var(--accent-color);
+        }
+
+        .game-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+            flex-grow: 1;
+        }
+
+        .play-btn {
+            display: inline-block;
+            text-align: center;
+            background-color: var(--accent-color);
+            color: #0b0f19;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
+        }
+
+        .play-btn:hover {
+            background-color: #7dd3fc;
+            transform: scale(1.03);
+            box-shadow: 0 6px 16px rgba(56, 189, 248, 0.4);
+        }
+
+        .play-btn:active {
+            transform: scale(0.98);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            animation: fadeIn 2s ease-out;
+        }
+
+        /* キーフレームアニメーションの定義 */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Games</h1>
+        <p>これまでに作ったAIゲームです</p>
+    </header>
+
+    <main class="container">
+        <!-- ゲーム1 -->
+        <div class="game-card">
+            <div class="game-thumbnail">GAME 01</div>
+            <div class="game-info">
+                <h2 class="game-title">カオス弾幕ローグ</h2>
+                <p class="game-desc">敵の弾を避けるゲーム</p>
+                <a href="カオス弾幕ローグ.html" class="play-btn">今すぐプレイ</a>
+            </div>
+        </div>
+
+        <!-- ゲーム2 -->
+        <div class="game-card">
+            <div class="game-thumbnail">GAME 02</div>
+            <div class="game-info">
+                <h2 class="game-title">灰塔クライム</h2>
+                <p class="game-desc">神ゲー</p>
+                <a href="game__2_ (1).html" class="play-btn">今すぐプレイ</a>
+            </div>
+        </div>
+
+        <!-- ゲーム3 -->
+        <div class="game-card">
+            <div class="game-thumbnail">GAME 03</div>
+            <div class="game-info">
+                <h2 class="game-title">ヴォイドホッパーII</h2>
+                <p class="game-desc">重力を反転させるゲーム</p>
+                <a href="ヴォイドホッパーII.html" class="play-btn">今すぐプレイ</a>
+            </div>
+        </div>
+
+        <!-- ゲーム4 -->
+        <div class="game-card">
+            <div class="game-thumbnail">GAME 04</div>
+            <div class="game-info">
+                <h2 class="game-title">ドットバースト</h2>
+                <p class="game-desc">パズルゲーム</p>
+                <a href="ドットバースト_100ステージ.html" class="play-btn">今すぐプレイ</a>
+            </div>
+        </div>
+
+        <!-- ゲーム5 -->
+        <div class="game-card">
+            <div class="game-thumbnail">GAME 05</div>
+            <div class="game-info">
+                <h2 class="game-title">ロケット組立&太陽系シミュレータ</h2>
+                <p class="game-desc">太陽系探査をするゲーム</p>
+                <a href="ロケット組立&太陽系シミュレータ (1).html" class="play-btn">今すぐプレイ</a>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 sepizi. Free to use.</p>
+    </footer>
+
+</body>
+</html>
